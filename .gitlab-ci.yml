@@ -1,0 +1,45 @@
+# General information:
+# This file is used to define the pipeline for creating and configuring a GitLab repository.
+
+# Default image for jobs
+image: ${DOCKER_HOST}/alpine/git:v2.30.1
+
+.shared_scm_runner_medium3:
+  tags:
+    - scm-eks-shared-medium3
+
+variables:
+  # Pre-filled variables
+  GROUP_PATH:
+    value: ""
+    description: Enter the GitLab group path in this format "EMEA/FirstVision/Helix/demo-apps"
+  REPO_NAME:
+    value: ""
+    description: Enter the name of the repository to be created in this format "Sample_Repo"
+  BRANCHING_STRATEGY:
+    value: ""
+    description: Set to 'gitflow' to create a develop branch and make it default, 'trunk' to create only master branch
+
+stages:
+  - setup
+
+create_repo:
+  extends: [.shared_scm_runner_medium3]
+  image: DOCKER_HOST/customimages/scm/python-gitlab-alpine:3.11.9-4.4.0-3.18.6-2
+  cache:
+    key: "${CI_PROJECT_PATH_SLUG}"
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    GITLAB_URL: "https://gitlab.cloud/"
+    PRIVATE_TOKEN: $GITLAB_API_TOKEN
+  stage: setup
+  script:
+    # Install dependencies
+    - pip install --upgrade pip --quiet
+    - pip install --upgrade python-gitlab==5.6.0 --quiet
+    - pip install requests --quiet
+
+    # Run the Python script to create the repository
+    - python create_gitlab_repo.py
